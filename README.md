@@ -8,7 +8,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%2012%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](docs/03-构建与发布.md)
-[![Version](https://img.shields.io/badge/version-V0.0.1-2F6BFF?style=flat-square)](../../releases)
+[![Version](https://img.shields.io/badge/version-V0.0.1-2F6BFF?style=flat-square)](https://github.com/lots0o0/go2servicemode/releases)
 [![ABI](https://img.shields.io/badge/ABI-arm64--v8a-6B7280?style=flat-square)](docs/03-构建与发布.md)
 
 </div>
