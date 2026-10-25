@@ -108,6 +108,19 @@ fun MainScreen(
             ) { onOpenMenu(Engine.KEY_NAS) }
         }
 
+        Spacer(Modifier.height(12.dp))
+
+        // 本工具只负责拉起菜单，不负责区域与 SA 解锁。把这一点写在用户点得到的位置。
+        SectionCard(level = CardLevel.Subtle) {
+            BasicText("SA / NR5G", style = SectionStyle.copy(fontSize = 14.sp))
+            Spacer(Modifier.height(6.dp))
+            BasicText(
+                "针对 S948N 类机型，在 S9480 区域的 SA / NR5G 解锁，" +
+                    "请前往酷安或抖音查看教程。",
+                style = BodySoftStyle
+            )
+        }
+
         if (busy && busyMessage != null) {
             Spacer(Modifier.height(14.dp))
             Row(

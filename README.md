@@ -7,9 +7,9 @@
 把一条受支持的 `keyString` 发给三星 ServiceMode，打开工程菜单。不提供 root 通道、shell，或供其他应用使用的特权接口。
 
 [![License](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Android%2012%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](docs/03-构建与发布.md)
+![Platform](https://img.shields.io/badge/platform-Android%2012%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
 [![Version](https://img.shields.io/badge/version-V0.0.2-2F6BFF?style=flat-square)](https://github.com/lots0o0/go2servicemode/releases)
-[![ABI](https://img.shields.io/badge/ABI-arm64--v8a-6B7280?style=flat-square)](docs/03-构建与发布.md)
+![ABI](https://img.shields.io/badge/ABI-arm64--v8a-6B7280?style=flat-square)
 
 </div>
 
@@ -34,7 +34,7 @@
 
 | 版本 | 构建日期 | APK SHA-256 | 证书 SHA-256 |
 |---|---|---|---|
-| **V0.0.2** | 2026-10-25 19:01 | `d0c781c392353a6350cc78e482773f5ac9b56268c055890094e6d65b589c1a89` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
+| **V0.0.2** | 2026-10-25 19:07 | `b700479909bad3b4d2e4bf9617701511d0b7580b8567beb316eb5f240db7ebf4` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
 | V0.0.1 | 2026-10-25 18:47 | `5e6b60436a98b832b8f691919c9cdbb855567fe8660f9d6381da7726c9e811a0` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
 
 安装后在「关于」页右上角可看到 `V0.0.2`、构建日期与 APK 的 SHA-256 前 16 位，可与上表核对。
@@ -84,18 +84,13 @@
 
 应用进程看不到 su：ksud 的 bind-mount 位于应用不共享的 mount namespace，且内核授权门只放行 uid 2000。因此应用侧不持有任何特权，只与 root 助手通过应用自己的目录交换文本。
 
-通道选型、否决过程、踩过的坑，都在[探索记录](docs/01-探索记录.md)里。
-
 </details>
 
 ## 文档
 
 | 文件 | 内容 |
 |---|---|
-| [探索记录](docs/01-探索记录.md) | 一步一步怎么探出来的：证据、否证、踩坑 |
-| [技术说明](docs/02-技术说明.md) | 分层、两个事务、通道约束、日志 |
-| [构建与发布](docs/03-构建与发布.md) | 环境、签名、版本规则、发布流程 |
-| [第三方与许可](docs/04-第三方与许可.md) | 二进制来源、依赖许可、免责 |
+| [第三方与许可](docs/第三方与许可.md) | 二进制来源、依赖许可、免责 |
 
 ## 构建
 
@@ -103,7 +98,7 @@
 ./gradlew assembleRelease
 ```
 
-需要 JDK 17 与 Android SDK 37。签名材料从 `keystore.properties`（不进版本库）或 `GO2SM_*` 环境变量读取；没有时构建会回退 debug 签名并给出警告。详见[构建与发布](docs/03-构建与发布.md)。
+需要 JDK 17 与 Android SDK 37。签名材料从 `keystore.properties`（不进版本库）或 `GO2SM_*` 环境变量读取；没有时构建会回退 debug 签名并给出警告。
 
 ## 支持
 
@@ -127,7 +122,7 @@
 
 本仓库代码为 **MIT**，见 [LICENSE](LICENSE)。
 
-仓库内含两个预编译二进制（`ksud-real`、`libexp.so`），来源与再分发条件见[第三方与许可](docs/04-第三方与许可.md)。
+仓库内含两个预编译二进制（`ksud-real`、`libexp.so`），来源与再分发条件见[第三方与许可](docs/第三方与许可.md)。
 
 ## 致谢
 
