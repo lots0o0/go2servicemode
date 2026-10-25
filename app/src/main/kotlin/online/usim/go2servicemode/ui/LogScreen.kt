@@ -51,7 +51,7 @@ fun LogScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(bottom = 32.dp)
+        contentPadding = PaddingValues(bottom = 112.dp)
     ) {
         item {
             ScreenHeader("运行历史") {

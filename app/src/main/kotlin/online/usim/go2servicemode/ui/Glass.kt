@@ -107,6 +107,7 @@ private fun Modifier.tap(enabled: Boolean = true, onClick: () -> Unit): Modifier
 
 @Composable
 fun NavBar(
+    modifier: Modifier = Modifier,
     backdrop: LayerBackdrop,
     page: Int,
     aboutOpen: Boolean,
@@ -114,11 +115,14 @@ fun NavBar(
     onAbout: () -> Unit
 ) {
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(start = 20.dp, end = 20.dp, bottom = 16.dp, top = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
+        // Layout unchanged: 主页 / 日志 on the left, 关于 on the right. Only the
+        // fill is removed — each capsule is pure refraction, so the page shows
+        // through it instead of a milky plate.
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         NavCapsule(backdrop, "主页", selected = page == 0 && !aboutOpen) { onTab(0) }
@@ -139,8 +143,8 @@ private fun NavCapsule(
         Modifier
             .glass(
                 backdrop = backdrop,
-                tint = Color.White.copy(alpha = if (selected) 0.34f else 0.14f),
-                lensDp = if (selected) 18f else 8f
+                tint = Color.Transparent,
+                lensDp = if (selected) 22f else 10f
             )
             .tap { onClick() }
             .padding(horizontal = 22.dp, vertical = 12.dp)
@@ -180,8 +184,8 @@ fun GlassButton(
         modifier
             .glass(
                 backdrop = backdrop,
-                tint = if (accent) Tone.Accent.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.20f),
-                lensDp = if (accent) 14f else 8f
+                tint = if (accent) Tone.Accent.copy(alpha = 0.10f) else Color.Transparent,
+                lensDp = if (accent) 16f else 10f
             )
             .tap { onClick() }
             .padding(horizontal = 18.dp, vertical = 11.dp)
@@ -231,8 +235,8 @@ fun GlassRow(
             .fillMaxWidth()
             .glass(
                 backdrop = backdrop,
-                tint = Color.White.copy(alpha = 0.20f),
-                lensDp = 8f
+                tint = Color.Transparent,
+                lensDp = 10f
             )
             .tap { onClick() }
             .padding(horizontal = 18.dp, vertical = 13.dp),

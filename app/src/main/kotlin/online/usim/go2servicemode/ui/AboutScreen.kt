@@ -53,7 +53,7 @@ fun AboutScreen(backdrop: LayerBackdrop, version: String, buildDate: String, apk
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(bottom = 28.dp)
+        contentPadding = PaddingValues(bottom = 112.dp)
     ) {
         item {
             ScreenHeader("关于") {

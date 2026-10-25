@@ -1,6 +1,7 @@
 package online.usim.go2servicemode
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -26,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -71,6 +73,12 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(0, 0)
         )
         super.onCreate(savedInstanceState)
+        // Android may paint a translucent scrim across the whole navigation bar
+        // area for contrast. With a transparent nav bar that scrim reads as a
+        // full-width plate covering the page under the floating capsules.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
         setContent { App() }
     }
 }
@@ -174,12 +182,11 @@ private fun App() {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) { AppBackground() }
 
-        Column(Modifier.fillMaxSize()) {
-            // The About overlay lives inside the page area, not above the whole
-            // screen: otherwise it covers the navigation and the only way back
-            // is the system gesture.
-            Box(Modifier.weight(1f)) {
-                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { index ->
+        // Pages fill the whole screen; the navigation floats above them. There is
+        // no intermediate "navigation bar" strip taking a slice of the layout —
+        // that strip was what made the capsules look like they sat on a second
+        // layer instead of directly on the page.
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { index ->
                     when (index) {
                         PAGE_MAIN -> MainScreen(
                             backdrop = backdrop,
@@ -214,13 +221,13 @@ private fun App() {
                                         } else {
                                             tx1!!.filter { it.isNotBlank() }.forEach { add(it) }
                                         }
-                                        // The payload starts the helper as its
-                                        // last step, so it lands a moment after
-                                        // the engine returns.
+                                        // The helper is spawned before
+                                        // late-load and waits for su itself, so
+                                        // give it enough time to come up.
                                         val ready = withContext(Dispatchers.IO) {
                                             var ok = MenuTx.ready(context)
                                             var tries = 0
-                                            while (!ok && tries < 50) {
+                                            while (!ok && tries < 120) {
                                                 Thread.sleep(100)
                                                 ok = MenuTx.ready(context)
                                                 tries++
@@ -232,9 +239,17 @@ private fun App() {
                                         }
                                         device = withContext(Dispatchers.IO) { DeviceProbe.probe(context) }
                                         tx = if (ready) TxState.Ready else TxState.Failed
+                                        // The engine's own return code is not a
+                                        // verdict: it has been observed returning
+                                        // failure while su was in fact mounted.
+                                        val lateloadOk = tx1?.any {
+                                            it.startsWith("tx1-lateload=0")
+                                        } == true
                                         finishRun(
                                             when {
                                                 ready -> "建立临时 su · 已就绪"
+                                                lateloadOk ->
+                                                    "建立临时 su · su 已建立，但通道未启动"
                                                 // Engine returns 0 in about a second
                                                 // without running the payload when the
                                                 // exploit already ran in this boot.
@@ -287,20 +302,19 @@ private fun App() {
                     }
                 }
 
-                AboutOverlay(showAbout, apkHash, backdrop)
-            }
+        AboutOverlay(showAbout, apkHash, backdrop)
 
-            NavBar(
-                backdrop = backdrop,
-                page = if (showAbout) -1 else pagerState.currentPage,
-                aboutOpen = showAbout,
-                onTab = { target ->
-                    showAbout = false
-                    scope.launch { pagerState.animateScrollToPage(target) }
-                },
-                onAbout = { showAbout = !showAbout }
-            )
-        }
+        NavBar(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            backdrop = backdrop,
+            page = if (showAbout) -1 else pagerState.currentPage,
+            aboutOpen = showAbout,
+            onTab = { target ->
+                showAbout = false
+                scope.launch { pagerState.animateScrollToPage(target) }
+            },
+            onAbout = { showAbout = !showAbout }
+        )
 
         val target = viewer
         if (target != null) {

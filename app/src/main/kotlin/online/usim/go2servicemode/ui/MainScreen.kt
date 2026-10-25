@@ -133,6 +133,7 @@ fun MainScreen(
             }
         }
 
-        Spacer(Modifier.height(28.dp))
+        // 导航浮在页面之上，底部留出它的高度，避免内容被胶囊挡住
+        Spacer(Modifier.height(112.dp))
     }
 }
