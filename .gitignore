@@ -5,10 +5,11 @@ local.properties
 *.iml
 .idea/
 
-# Signing material — never commit a private key.
-*.jks
-*.keystore
-
 # Kotlin incremental cache
 .kotlin/
 
+# Signing material: the private key and its passwords never enter version control.
+# See keystore.properties.example for the expected shape.
+keystore.properties
+*.jks
+*.keystore
