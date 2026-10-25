@@ -2,6 +2,7 @@ package online.usim.go2servicemode.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,13 +33,14 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.shapes.Capsule
 
 /**
- * Liquid glass, using the library's own highlight / inner-shadow passes instead
- * of painted borders. Selection is expressed by refraction strength, not by
- * filling the capsule with a dark colour.
+ * Liquid glass, using the library's own highlight pass.
+ *
+ * Deliberately no drop shadow and no inner shadow: applied to small capsules
+ * inside white cards those two passes read as a grey band and looked like a
+ * rendering defect. Emphasis comes from the tint and the lens strength only.
  */
 @Composable
 fun AppBackground() {
@@ -73,21 +76,34 @@ private fun Blob(color: Color, modifier: Modifier) {
 private fun Modifier.glass(
     backdrop: LayerBackdrop,
     tint: Color,
-    lensRefractionDp: Float,
-    blurDp: Float = 2f,
-    highlight: Highlight = Highlight.Default
+    lensDp: Float,
+    blurDp: Float = 2f
 ): Modifier = this.drawBackdrop(
     backdrop = backdrop,
     shape = { Capsule() },
     effects = {
         vibrancy()
         blur(blurDp.dp.toPx())
-        lens(lensRefractionDp.dp.toPx(), (lensRefractionDp * 2f).dp.toPx())
+        lens(lensDp.dp.toPx(), (lensDp * 2f).dp.toPx())
     },
-    highlight = { highlight },
-    innerShadow = { InnerShadow.Default },
+    highlight = { Highlight.Default },
     onDrawSurface = { drawRect(tint) }
 )
+
+/**
+ * Click without the platform ripple: a ripple over a translucent glass surface
+ * darkens it for a moment and is indistinguishable from a rendering defect.
+ */
+@Composable
+private fun Modifier.tap(enabled: Boolean = true, onClick: () -> Unit): Modifier {
+    val source = remember { MutableInteractionSource() }
+    return this.clickable(
+        interactionSource = source,
+        indication = null,
+        enabled = enabled,
+        onClick = onClick
+    )
+}
 
 @Composable
 fun NavBar(
@@ -123,12 +139,10 @@ private fun NavCapsule(
         Modifier
             .glass(
                 backdrop = backdrop,
-                tint = Color.White.copy(alpha = if (selected) 0.30f else 0.12f),
-                lensRefractionDp = if (selected) 20f else 8f,
-                blurDp = if (selected) 3f else 1.5f,
-                highlight = if (selected) Highlight.Default else Highlight.Ambient
+                tint = Color.White.copy(alpha = if (selected) 0.34f else 0.14f),
+                lensDp = if (selected) 18f else 8f
             )
-            .clickable { onClick() }
+            .tap { onClick() }
             .padding(horizontal = 22.dp, vertical = 12.dp)
     ) {
         BasicText(
@@ -142,7 +156,6 @@ private fun NavCapsule(
     }
 }
 
-/** Primary/secondary action, same material; emphasis comes from the tint. */
 @Composable
 fun GlassButton(
     backdrop: LayerBackdrop,
@@ -167,11 +180,10 @@ fun GlassButton(
         modifier
             .glass(
                 backdrop = backdrop,
-                tint = if (accent) Tone.Accent.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.16f),
-                lensRefractionDp = if (accent) 18f else 10f,
-                highlight = if (accent) Highlight.Default else Highlight.Ambient
+                tint = if (accent) Tone.Accent.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.20f),
+                lensDp = if (accent) 14f else 8f
             )
-            .clickable { onClick() }
+            .tap { onClick() }
             .padding(horizontal = 18.dp, vertical = 11.dp)
     ) {
         BasicText(
@@ -185,7 +197,6 @@ fun GlassButton(
     }
 }
 
-/** Menu row as a wide glass capsule. */
 @Composable
 fun GlassRow(
     backdrop: LayerBackdrop,
@@ -220,11 +231,10 @@ fun GlassRow(
             .fillMaxWidth()
             .glass(
                 backdrop = backdrop,
-                tint = Color.White.copy(alpha = 0.16f),
-                lensRefractionDp = 10f,
-                highlight = Highlight.Ambient
+                tint = Color.White.copy(alpha = 0.20f),
+                lensDp = 8f
             )
-            .clickable { onClick() }
+            .tap { onClick() }
             .padding(horizontal = 18.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

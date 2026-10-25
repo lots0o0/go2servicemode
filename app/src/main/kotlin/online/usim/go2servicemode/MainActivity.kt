@@ -194,6 +194,11 @@ private fun App() {
                                     startRun("建立临时 su")
                                     scope.launch {
                                         pagerState.animateScrollToPage(PAGE_LOG)
+                                        // The payload aborts if the mailbox files
+                                        // are missing, and they are created by the
+                                        // app — so make sure they exist before the
+                                        // engine runs, not in a racing effect.
+                                        withContext(Dispatchers.IO) { MenuTx.ensure(context) }
                                         val t0 = System.currentTimeMillis()
                                         val rc = withContext(Dispatchers.IO) {
                                             Engine.establishSu(context) { line -> add(line) }
@@ -203,10 +208,11 @@ private fun App() {
                                         val tx1 = withContext(Dispatchers.IO) {
                                             runCatching { File(TX1_LOG).readLines() }.getOrNull()
                                         }
-                                        if (tx1.isNullOrEmpty()) {
-                                            add("$TX1_LOG 读不到")
+                                        val payloadRan = !tx1.isNullOrEmpty()
+                                        if (!payloadRan) {
+                                            add("$TX1_LOG 读不到：引擎没有执行载荷")
                                         } else {
-                                            tx1.filter { it.isNotBlank() }.forEach { add(it) }
+                                            tx1!!.filter { it.isNotBlank() }.forEach { add(it) }
                                         }
                                         // The payload starts the helper as its
                                         // last step, so it lands a moment after
@@ -214,17 +220,28 @@ private fun App() {
                                         val ready = withContext(Dispatchers.IO) {
                                             var ok = MenuTx.ready(context)
                                             var tries = 0
-                                            while (!ok && tries < 25) {
+                                            while (!ok && tries < 50) {
                                                 Thread.sleep(100)
                                                 ok = MenuTx.ready(context)
                                                 tries++
                                             }
                                             ok
                                         }
+                                        if (ready) {
+                                            withContext(Dispatchers.IO) { BootMark.markSuccess(context) }
+                                        }
                                         device = withContext(Dispatchers.IO) { DeviceProbe.probe(context) }
                                         tx = if (ready) TxState.Ready else TxState.Failed
                                         finishRun(
-                                            if (ready) "建立临时 su · 已就绪" else "建立临时 su · 失败",
+                                            when {
+                                                ready -> "建立临时 su · 已就绪"
+                                                // Engine returns 0 in about a second
+                                                // without running the payload when the
+                                                // exploit already ran in this boot.
+                                                !payloadRan && elapsed < 3000 ->
+                                                    "建立临时 su · 本次开机已执行过，需重启后再试"
+                                                else -> "建立临时 su · 失败"
+                                            },
                                             elapsed
                                         )
                                     }
