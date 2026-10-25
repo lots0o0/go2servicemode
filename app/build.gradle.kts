@@ -50,8 +50,8 @@ android {
         applicationId = "online.usim.go2servicemode"
         minSdk = 31
         targetSdk = 37
-        versionCode = 3
-        versionName = "0.0.2-R"
+        versionCode = 27
+        versionName = "0.0.3"
         buildConfigField("String", "BUILD_STAMP", "\"$buildStamp\"")
         buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
     }
@@ -119,4 +119,8 @@ dependencies {
     // Liquid glass: backdrop + shapes (Capsule, ...) from Kyant0.
     implementation("io.github.kyant0:backdrop:2.0.1")
     implementation("io.github.kyant0:shapes:1.2.1")
+
+    // Shizuku: shell context used to start the root helper (see ShizukuShell).
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 }

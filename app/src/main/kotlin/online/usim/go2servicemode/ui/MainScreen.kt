@@ -37,6 +37,7 @@ fun MainScreen(
     tx: TxState,
     busyMessage: String?,
     onEstablish: () -> Unit,
+    onStartChannel: () -> Unit,
     onOpenMenu: (String) -> Unit
 ) {
     Column(
@@ -55,9 +56,9 @@ fun MainScreen(
         SectionCard(level = CardLevel.Primary) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    BasicText("建立临时 su", style = SectionStyle.copy(fontSize = 18.sp))
+                    BasicText("① 准备临时 su", style = SectionStyle.copy(fontSize = 18.sp))
                     Spacer(Modifier.height(3.dp))
-                    Hint("权限通道，重启后失效")
+                    Hint("提权并写入助手脚本；重启后失效")
                 }
                 val (label, fg, bg) = when (tx) {
                     TxState.Ready -> Triple("已就绪", Tone.OkFg, Tone.OkBg)
@@ -80,15 +81,41 @@ fun MainScreen(
 
         Spacer(Modifier.height(12.dp))
 
+        SectionCard(level = if (device.canOpenMenu) CardLevel.Primary else CardLevel.Normal) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    BasicText("② 启动通道", style = SectionStyle.copy(fontSize = 18.sp))
+                    Spacer(Modifier.height(3.dp))
+                    Hint(if (device.canOpenMenu) "通道在线" else "经 Shizuku 启动常驻助手")
+                }
+                StatusChip(
+                    if (device.canOpenMenu) "在线" else "离线",
+                    if (device.canOpenMenu) Tone.OkFg else Tone.IdleFg,
+                    if (device.canOpenMenu) Tone.OkBg else Tone.IdleBg
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            GlassButton(
+                backdrop = backdrop,
+                label = "启动通道",
+                modifier = Modifier.fillMaxWidth(),
+                accent = true,
+                enabled = !busy,
+                onClick = onStartChannel
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         val ready = device.canOpenMenu
         SectionCard(level = if (ready) CardLevel.Primary else CardLevel.Normal) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                BasicText("打开 ServiceMode", style = SectionStyle)
+                BasicText("③ 打开 ServiceMode", style = SectionStyle)
                 Spacer(Modifier.weight(1f))
                 if (!ready) StatusChip("待解锁", Tone.IdleFg, Tone.IdleBg)
             }
             Spacer(Modifier.height(4.dp))
-            Hint(if (ready) "选择要发送的 keyString" else "完成上一步后可用")
+            Hint("点一下就会自动提权并发送该 keyString")
             Spacer(Modifier.height(12.dp))
 
             GlassRow(

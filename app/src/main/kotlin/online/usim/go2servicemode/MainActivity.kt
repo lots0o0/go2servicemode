@@ -262,6 +262,44 @@ private fun App() {
                                     }
                                 }
                             },
+                            onStartChannel = {
+                                if (!busy) {
+                                    startRun("启动通道（Shizuku）")
+                                    scope.launch {
+                                        pagerState.animateScrollToPage(PAGE_LOG)
+                                        val rc = withContext(Dispatchers.IO) {
+                                            ShizukuShell.startHelper()
+                                        }
+                                        add("shizuku startHelper rc=$rc")
+                                        when (rc) {
+                                            -10 -> add("Shizuku 未运行：先打开 Shizuku 完成配对并启动")
+                                            -11 -> {
+                                                add("尚未获得 Shizuku 授权，正在申请…")
+                                                ShizukuShell.requestPermission()
+                                            }
+                                            -12 -> add("Shizuku 拒绝执行该命令")
+                                        }
+                                        val ok = withContext(Dispatchers.IO) {
+                                            var up = MenuTx.ready(context)
+                                            var tries = 0
+                                            while (!up && tries < 50) {
+                                                Thread.sleep(100)
+                                                up = MenuTx.ready(context)
+                                                tries++
+                                            }
+                                            up
+                                        }
+                                        tx = if (ok) TxState.Ready else TxState.Failed
+                                        device = withContext(Dispatchers.IO) {
+                                            DeviceProbe.probe(context)
+                                        }
+                                        finishRun(
+                                            if (ok) "启动通道 · 已就绪" else "启动通道 · 未就绪",
+                                            0
+                                        )
+                                    }
+                                }
+                            },
                             onOpenMenu = { key ->
                                 if (!busy) {
                                     val name =

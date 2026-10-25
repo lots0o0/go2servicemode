@@ -8,7 +8,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android%2012%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
-[![Version](https://img.shields.io/badge/version-V0.0.2--R-2F6BFF?style=flat-square)](https://github.com/lots0o0/go2servicemode/releases)
+[![Version](https://img.shields.io/badge/version-V0.0.3-2F6BFF?style=flat-square)](https://github.com/lots0o0/go2servicemode/releases)
 ![ABI](https://img.shields.io/badge/ABI-arm64--v8a-6B7280?style=flat-square)
 
 </div>
@@ -23,7 +23,8 @@
 
 ## 特性
 
-- **两个事务**：① 建立临时 su ② 发送启动指令。分开是为了任一步失败都能单独定位
+- **三步可控**：① 准备临时 su ② 经 Shizuku 启动常驻通道 ③ 发送启动指令。任一步失败都能单独定位
+- **通道经 Shizuku 拉起**：助手在 ksu 域运行，引擎恢复 SELinux 之后依然可用，因此一次开机内可以反复点菜单
 - **不碰固件**：不写 `/system`、`/vendor`、`/product`、`/odm`、`/system_ext`、`prism`、`optics`；不碰 `boot`、`vbmeta`、`efs`、`param`、`modem`；不关 verity
 - **不对外暴露 su**：应用侧看不到 su，特权调用只在 root 助手内部发生
 - **日志落盘**：每次运行一个文件，全屏查看器可读、导出、删除
@@ -34,11 +35,12 @@
 
 | 版本 | 构建日期 | APK SHA-256 | 证书 SHA-256 |
 |---|---|---|---|
-| **V0.0.2-R** | 2026-10-25 19:43 | `238288984c5adec5bc51fe0995b146aa54600eb9b29ab4fe36670c8c5fe86d01` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
+| **V0.0.3** | 2026-10-25 22:46 | `3442e13dc144eb01a2fbd5ca17809d3fd1f2e518bbb654b9b640f6a4b02bb832` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
+| V0.0.2-R | 2026-10-25 19:43 | `238288984c5adec5bc51fe0995b146aa54600eb9b29ab4fe36670c8c5fe86d01` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
 | V0.0.2 | 2026-10-25 19:35 | `556461b82b6991d214d47b7253c279ff8c0c56cbbd875d66ef23d44b2444a2e7` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
 | V0.0.1 | 2026-10-25 18:47 | `5e6b60436a98b832b8f691919c9cdbb855567fe8660f9d6381da7726c9e811a0` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
 
-安装后在「关于」页右上角可看到 `V0.0.2-R`、构建日期与 APK 的 SHA-256 前 16 位，可与上表核对。
+安装后在「关于」页右上角可看到 `V0.0.3`、构建日期与 APK 的 SHA-256 前 16 位，可与上表核对。
 
 > 升级要求 `versionCode` 递增且签名证书一致。换签名等于换应用，无法覆盖安装。
 
@@ -49,14 +51,16 @@
 | 系统 | Android 12 以上（minSdk 31），在 Android 17 / One UI 上验证 |
 | 架构 | arm64-v8a |
 | 前提 | 设备仍存在 DirtyFrag（CVE-2026-43284）提权链 |
+| Shizuku | 需要安装 [Shizuku](https://github.com/RikkaApps/Shizuku) 并完成一次无线调试配对（仅首次） |
 
 从 Releases 下载 `app-release.apk` 安装即可。
 
 ## 使用
 
-1. 打开应用，点「建立临时 su」，等状态变成**已就绪**
-2. 点「GCF 菜单」或「NAS / 主菜单」
-3. 「日志」页可以查看每次运行的结果；点「查看」进入全屏日志
+1. **准备临时 su**：点「① 准备临时 su」。它会提权、`late-load` 出 `/system/bin/su`，并把助手脚本写入 `/data/local/tmp/g2sm-helper.sh`
+2. **启动通道**：点「② 启动通道」。App 通过 Shizuku 执行 `su -c` 启动助手，助手落在 `u:r:ksu:s0`，状态变为**通道在线**
+3. **打开菜单**：点「③ 打开 ServiceMode」里的任一菜单。通道在线期间可以反复点，不必重启
+4. 「日志」页可以查看每次运行的结果；点「查看」进入全屏日志
 
 失败时按这个顺序排查：载荷日志 → `/system/bin/su` 是否存在 → 助手心跳 → 助手输出的 `am` 结果 → 是否在同一次开机内重复运行过。
 
@@ -133,6 +137,7 @@
 - **diabl0w** — DFRoot / DirtyFrag
 - **snothin** — GhostSam，三星 KDP / DEFEX 适配
 - **tiann** — KernelSU
+- **Rikka** — Shizuku，无线调试配对与 shell 上下文
 
 **文档与参考项目**
 

@@ -24,11 +24,11 @@ data class DeviceSnapshot(
 
     val description: String
         get() = when {
-            helperAlive -> "通道在线，可直接执行第二步"
-            successThisBoot -> "本次开机已建立过，但通道已断开；重启后可重新执行"
-            payloadSucceeded -> "本次开机曾建立成功，但通道已断开；重启后可重新执行"
+            helperAlive -> "通道在线"
+            successThisBoot -> "本次开机已经执行过；再开菜单需重启"
+            payloadSucceeded -> "本次开机曾建立成功；再开菜单需重启"
             payloadRan -> "上次执行未完成，详见日志"
-            else -> "未检测到通道，请先执行上一步"
+            else -> "点下面的菜单即可，会自动完成临时提权"
         }
 }
 
