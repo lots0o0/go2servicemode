@@ -50,8 +50,8 @@ android {
         applicationId = "online.usim.go2servicemode"
         minSdk = 31
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.0.2"
+        versionCode = 3
+        versionName = "0.0.2-R"
         buildConfigField("String", "BUILD_STAMP", "\"$buildStamp\"")
         buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
     }
