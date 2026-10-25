@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  go2servicemode — manifest.
+
+  Deliberately absent compared with the UniRoot app:
+    * no boot receiver / no auto re-root   (nothing re-runs itself)
+    * no REQUEST_INSTALL_PACKAGES          (cannot install anything)
+    * no SYSTEM_ALERT_WINDOW / no overlay
+    * no Shizuku provider, no FileProvider
+    * no exported components of any kind
+
+  INTERNET is REQUIRED: IpSecService enforces it on openUdpEncapsulationSocket()
+  / allocateSecurityParameterIndex() / transport-mode transforms - i.e. the whole
+  SA setup the exploit depends on.
+
+  FOREGROUND_SERVICE is used only to keep this process un-frozen for the ~30 s
+  the exploit needs (see RunService); the service has no other behaviour.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- native libs are extracted on install via packaging.jniLibs.useLegacyPackaging -->
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <!-- NoActionBar on purpose: the platform ActionBar would draw a title
+             band above our own content and break the edge-to-edge look. -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".RunService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

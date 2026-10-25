@@ -1,0 +1,14 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+
+# Signing material — never commit a private key.
+*.jks
+*.keystore
+
+# Kotlin incremental cache
+.kotlin/
+

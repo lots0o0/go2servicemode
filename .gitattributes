@@ -1,0 +1,9 @@
+# Shell scripts are executed on-device and MUST keep LF endings: a CRLF
+# payload.sh fails to parse under /system/bin/sh.
+* text=auto eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.so binary
+*.apk binary
+app/src/main/assets/df/ksud-real binary
