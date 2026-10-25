@@ -18,13 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -32,15 +30,15 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 
 /**
- * Liquid-glass surface used by every capsule in the app: navigation, primary
- * actions, menu rows and small buttons. One material, one set of parameters,
- * so a button never has to fall back to a flat fill or a shadow.
- *
- * The backdrop has to be applied to the page background container (see
- * AppBackground), otherwise drawBackdrop has nothing to sample.
+ * Liquid glass, using the library's own highlight / inner-shadow passes instead
+ * of painted borders. Selection is expressed by refraction strength, not by
+ * filling the capsule with a dark colour.
  */
 @Composable
 fun AppBackground() {
@@ -72,26 +70,26 @@ private fun Blob(color: Color, modifier: Modifier) {
     )
 }
 
-/** Shared glass drawing for capsules of any width. */
-private fun Modifier.glassCapsule(backdrop: LayerBackdrop, fill: Color): Modifier =
-    this
-        .drawBackdrop(
-            backdrop = backdrop,
-            shape = { Capsule() },
-            effects = {
-                vibrancy()
-                blur(2f.dp.toPx())
-                lens(10f.dp.toPx(), 22f.dp.toPx())
-            },
-            onDrawSurface = { drawRect(fill) }
-        )
-        .drawBehind {
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.72f),
-                style = Stroke(width = 1.2f.dp.toPx()),
-                cornerRadius = CornerRadius(size.height / 2f)
-            )
-        }
+/** One glass surface for every capsule in the app. */
+private fun Modifier.glass(
+    backdrop: LayerBackdrop,
+    tint: Color,
+    lensRefractionDp: Float,
+    blurDp: Float = 2f,
+    highlight: Highlight = Highlight.Default
+): Modifier = this.drawBackdrop(
+    backdrop = backdrop,
+    shape = { Capsule() },
+    effects = {
+        vibrancy()
+        blur(blurDp.dp.toPx())
+        lens(lensRefractionDp.dp.toPx(), (lensRefractionDp * 2f).dp.toPx())
+    },
+    highlight = { highlight },
+    shadow = { Shadow.Default },
+    innerShadow = { InnerShadow.Default },
+    onDrawSurface = { drawRect(tint) }
+)
 
 @Composable
 fun NavBar(
@@ -123,24 +121,30 @@ private fun NavCapsule(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val fill = if (selected) Tone.Ink.copy(alpha = 0.92f) else Color.White.copy(alpha = 0.55f)
     Box(
         Modifier
-            .glassCapsule(backdrop, fill)
+            .glass(
+                backdrop = backdrop,
+                tint = Color.White.copy(alpha = if (selected) 0.30f else 0.12f),
+                lensRefractionDp = if (selected) 20f else 8f,
+                blurDp = if (selected) 3f else 1.5f,
+                highlight = if (selected) Highlight.Default else Highlight.Ambient
+            )
             .clickable { onClick() }
             .padding(horizontal = 22.dp, vertical = 12.dp)
     ) {
         BasicText(
             label,
-            style = TextStyle(color = if (selected) Color.White else Tone.InkSoft, fontSize = 14.sp)
+            style = TextStyle(
+                color = if (selected) Tone.Ink else Tone.InkSoft,
+                fontSize = 14.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            )
         )
     }
 }
 
-/**
- * Capsule button on glass. `accent = true` tints the glass instead of filling
- * it opaque, so the backdrop still shows through.
- */
+/** Primary/secondary action, same material; emphasis comes from the tint. */
 @Composable
 fun GlassButton(
     backdrop: LayerBackdrop,
@@ -150,32 +154,40 @@ fun GlassButton(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val fill = when {
-        !enabled -> Tone.CardSubtle
-        accent -> Tone.Accent.copy(alpha = 0.86f)
-        else -> Color.White.copy(alpha = 0.55f)
-    }
-    val textColor = when {
-        !enabled -> Tone.InkFaint
-        accent -> Color.White
-        else -> Tone.Ink
-    }
-    val surface = if (enabled) {
-        Modifier.glassCapsule(backdrop, fill)
-    } else {
-        Modifier.clip(ChipShape).background(fill)
+    if (!enabled) {
+        Box(
+            modifier
+                .clip(ChipShape)
+                .background(Tone.CardSubtle)
+                .padding(horizontal = 18.dp, vertical = 11.dp)
+        ) {
+            BasicText(label, style = TextStyle(color = Tone.InkFaint, fontSize = 13.sp))
+        }
+        return
     }
     Box(
         modifier
-            .then(surface)
-            .clickable(enabled = enabled) { onClick() }
+            .glass(
+                backdrop = backdrop,
+                tint = if (accent) Tone.Accent.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.16f),
+                lensRefractionDp = if (accent) 18f else 10f,
+                highlight = if (accent) Highlight.Default else Highlight.Ambient
+            )
+            .clickable { onClick() }
             .padding(horizontal = 18.dp, vertical = 11.dp)
     ) {
-        BasicText(label, style = TextStyle(color = textColor, fontSize = 13.sp))
+        BasicText(
+            label,
+            style = TextStyle(
+                color = if (accent) Tone.Accent else Tone.Ink,
+                fontSize = 13.sp,
+                fontWeight = if (accent) FontWeight.SemiBold else FontWeight.Normal
+            )
+        )
     }
 }
 
-/** Menu row as a wide glass capsule: name on the left, parameter underneath. */
+/** Menu row as a wide glass capsule. */
 @Composable
 fun GlassRow(
     backdrop: LayerBackdrop,
@@ -184,37 +196,48 @@ fun GlassRow(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
+    if (!enabled) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(ChipShape)
+                .background(Tone.CardSubtle)
+                .padding(horizontal = 18.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                BasicText(title, style = BodyStyle.copy(color = Tone.InkFaint))
+                Spacer(Modifier.size(2.dp))
+                BasicText(subtitle, style = CaptionStyle)
+            }
+            Box(
+                Modifier.size(24.dp).clip(CircleShape).background(Tone.IdleBg),
+                contentAlignment = Alignment.Center
+            ) { BasicText("›", style = TextStyle(color = Tone.InkFaint, fontSize = 14.sp)) }
+        }
+        return
+    }
     Row(
         Modifier
             .fillMaxWidth()
-            .then(
-                if (enabled) Modifier.glassCapsule(backdrop, Color.White.copy(alpha = 0.55f))
-                else Modifier.clip(ChipShape).background(Tone.CardSubtle)
+            .glass(
+                backdrop = backdrop,
+                tint = Color.White.copy(alpha = 0.16f),
+                lensRefractionDp = 10f,
+                highlight = Highlight.Ambient
             )
-            .clickable(enabled = enabled) { onClick() }
+            .clickable { onClick() }
             .padding(horizontal = 18.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            BasicText(
-                title,
-                style = BodyStyle.copy(color = if (enabled) Tone.Ink else Tone.InkFaint)
-            )
+            BasicText(title, style = BodyStyle)
             Spacer(Modifier.size(2.dp))
             BasicText(subtitle, style = CaptionStyle)
         }
         Box(
-            Modifier.size(24.dp).clip(CircleShape)
-                .background(if (enabled) Tone.Ink.copy(alpha = 0.9f) else Tone.IdleBg),
+            Modifier.size(24.dp).clip(CircleShape).background(Tone.Ink.copy(alpha = 0.85f)),
             contentAlignment = Alignment.Center
-        ) {
-            BasicText(
-                "›",
-                style = TextStyle(
-                    color = if (enabled) Color.White else Tone.InkFaint,
-                    fontSize = 14.sp
-                )
-            )
-        }
+        ) { BasicText("›", style = TextStyle(color = Color.White, fontSize = 14.sp)) }
     }
 }

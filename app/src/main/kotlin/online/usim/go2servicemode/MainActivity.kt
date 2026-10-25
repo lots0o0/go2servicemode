@@ -248,18 +248,7 @@ private fun App() {
 
                         else -> LogScreen(
                             backdrop = backdrop,
-                            summary = summary,
-                            log = log,
                             runs = runs,
-                            currentFile = runFile,
-                            onOpenCurrent = {
-                                viewer = ViewerTarget(
-                                    title = "本次运行",
-                                    summary = summary,
-                                    entries = log.toList(),
-                                    file = runFile
-                                )
-                            },
                             onOpenFile = { f ->
                                 viewer = ViewerTarget(
                                     title = LogStore.label(f),
@@ -277,7 +266,7 @@ private fun App() {
                     }
                 }
 
-                AboutOverlay(showAbout, apkHash)
+                AboutOverlay(showAbout, apkHash, backdrop)
             }
 
             NavBar(
@@ -312,7 +301,7 @@ private fun App() {
  * ColumnScope AnimatedVisibility overload cannot shadow the plain one.
  */
 @Composable
-private fun AboutOverlay(visible: Boolean, apkHash: String?) {
+private fun AboutOverlay(visible: Boolean, apkHash: String?, backdrop: com.kyant.backdrop.backdrops.LayerBackdrop) {
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + slideInVertically { it / 6 },
@@ -320,6 +309,7 @@ private fun AboutOverlay(visible: Boolean, apkHash: String?) {
     ) {
         Box(Modifier.fillMaxSize().background(Color(0xFFF7F9FD))) {
             AboutScreen(
+                backdrop = backdrop,
                 version = "V${BuildConfig.VERSION_NAME}",
                 buildDate = BuildConfig.BUILD_DATE,
                 apkHash = apkHash
