@@ -1,92 +1,152 @@
+<div align="center">
+
 # go2servicemode
 
-把一条受支持的 `keyString` 发送给三星 ServiceMode，用于打开工程菜单。
+**三星 ServiceMode 启动工具**
 
-不为任何应用提供常驻 root，不提供 shell，不写系统分区。
+把一条受支持的 `keyString` 发给三星 ServiceMode，打开工程菜单。不提供 root 通道、shell，或供其他应用使用的特权接口。
+
+[![License](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Android%2012%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](docs/03-构建与发布.md)
+[![Version](https://img.shields.io/badge/version-V0.0.1-2F6BFF?style=flat-square)](../../releases)
+[![ABI](https://img.shields.io/badge/ABI-arm64--v8a-6B7280?style=flat-square)](docs/03-构建与发布.md)
+
+</div>
 
 ---
 
-## 它做什么
+## 它解决什么
 
-在三星设备上，`ServiceModeApp` 声明为 `exported="false"` 且运行在电话进程里，只有 uid 0 能拉起它。这个工具因此需要一次**临时的、仅存在于内存的**提权，用完即止：
+三星的 `ServiceModeApp` 声明为 `exported="false"`，并且运行在电话进程（uid 1001）里，只有 uid 0 能拉起它。所以在非 root 状态下，普通应用和拨号暗码都进不去这个菜单。
 
-1. **事务 1**：运行提权引擎，落地临时 su，并留下一个常驻助手（root）负责后续的特权调用。
-2. **事务 2**：把 `am start ... --es keyString <白名单值>` 交给常驻助手执行。
+这个工具的做法是：用一次**纯内存的临时提权**换取调用权限，把 `keyString` 发出去，然后立刻收尾。没有常驻 root，没有授权面板，没有开机自启。
 
-两步分开，是为了任一步失败都能单独定位——合成一步时，"载荷没跑起来"和"`am` 参数不对"表现完全一样。
+## 特性
 
-## 它不做什么
+- **两个事务**：① 建立临时 su ② 发送启动指令。分开是为了任一步失败都能单独定位
+- **不碰固件**：不写 `/system`、`/vendor`、`/product`、`/odm`、`/system_ext`、`prism`、`optics`；不碰 `boot`、`vbmeta`、`efs`、`param`、`modem`；不关 verity
+- **不对外暴露 su**：应用侧看不到 su，特权调用只在 root 助手内部发生
+- **日志落盘**：每次运行一个文件，全屏查看器可读、导出、删除
+- **可核对**：关于页显示构建日期与**当前安装包自身的 SHA-256**
+- **液态玻璃界面**：基于 `kyant0/backdrop` 的 highlight / innerShadow / lens
 
-- 不向第三方应用暴露 su / shell
-- 不写 `/system`、`/vendor`、`/product`、`/odm`、`/system_ext`、`prism`、`optics`
-- 不触碰 `boot`、`vbmeta`、`efs`、`param`、`modem`，不关闭 verity
-- 无开机自启，无后台常驻服务
-- 不启动、也不依赖 KernelSU Manager
+## 版本
 
-所有写操作只发生在应用自己的 data 目录与 `/data/local/tmp`。
+| 版本 | 构建日期 | APK SHA-256 | 证书 SHA-256 |
+|---|---|---|---|
+| **V0.0.1** | 2026-10-25 18:47 | `5e6b60436a98b832b8f691919c9cdbb855567fe8660f9d6381da7726c9e811a0` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
 
-## 要求与限制
+安装后在「关于」页右上角可看到 `V0.0.1`、构建日期与 APK 的 SHA-256 前 16 位，可与上表核对。
+
+> 升级要求 `versionCode` 递增且签名证书一致。换签名等于换应用，无法覆盖安装。
+
+## 安装
+
+| 项 | 要求 |
+|---|---|
+| 系统 | Android 12 以上（minSdk 31），在 Android 17 / One UI 上验证 |
+| 架构 | arm64-v8a |
+| 前提 | 设备仍存在 DirtyFrag（CVE-2026-43284）提权链 |
+
+从 Releases 下载 `app-release.apk` 安装即可。
+
+## 使用
+
+1. 打开应用，点「建立临时 su」，等状态变成**已就绪**
+2. 点「GCF 菜单」或「NAS / 主菜单」
+3. 「日志」页可以查看每次运行的结果；点「查看」进入全屏日志
+
+失败时按这个顺序排查：载荷日志 → `/system/bin/su` 是否存在 → 助手心跳 → 助手输出的 `am` 结果 → 是否在同一次开机内重复运行过。
+
+## 限制
 
 | 项 | 说明 |
 |---|---|
-| 系统 | Android 12+（minSdk 31），在 Android 17 / One UI 上开发与验证 |
-| 架构 | arm64-v8a |
-| 生效条件 | 设备仍存在 DirtyFrag（CVE-2026-43284）提权链；系统更新后可能失效 |
-| 次数 | **一次开机只成功一次**。内核模块加载后，同一 boot 内重复运行会走短路分支 |
-| 生命周期 | 纯内存态，重启后 `/system/bin/su`、内核模块、Permissive 状态全部消失 |
+| 次数 | **一次开机只成功一次**，重复运行会走短路分支 |
+| 生命周期 | 重启后内核模块、临时 su、SELinux 状态全部消失 |
+| 系统更新 | 漏洞修复后失效 |
+| 通道延迟 | 助手轮询信箱，约 200 ms 量级 |
 
-## 用法
+<details>
+<summary><b>工作原理（点开）</b></summary>
 
-1. 安装并打开应用。
-2. 点「建立临时 su」，等待状态变为**已就绪**。
-3. 点下面两个菜单项之一：
-   - `GCF 菜单` — keyString `4238378`
-   - `NAS / 主菜单` — keyString `27663368378`
-4. 每次运行的摘要与原始输出都会落盘，「日志」页可查看、导出、删除。
+```
+事务 1  App → IpSec 建链 → 引擎提权 → payload（u:r:vendor_modprobe:s0）
+        payload：落 ksud → bind-mount 到 /system/bin/atrace
+                 → late-load --allow-shell → 启动常驻助手
+        App：等 su 出现 → 等助手心跳 → Ready
 
-若第 2 步失败，按日志页的原始输出定位，顺序是：载荷日志 → `/system/bin/su` 是否存在 → 助手心跳 → 助手输出的 `am` 结果。详见 `docs/01-background-and-qa.md` 第五节。
-
-## 构建
-
-```bash
-./gradlew assembleDebug      # 需要 JDK 17 与 Android SDK 37
+事务 2  App：写 files/tx2/req（序号 + am start 命令）
+        助手：读变化 → su -c "<命令>" → 追加 out.log
+        App：读增量 → 日志页展示
 ```
 
-完整说明（依赖、签名、仓库内二进制）见 [`docs/03-build.md`](docs/03-build.md)。
+应用进程看不到 su：ksud 的 bind-mount 位于应用不共享的 mount namespace，且内核授权门只放行 uid 2000。因此应用侧不持有任何特权，只与 root 助手通过应用自己的目录交换文本。
+
+通道选型、否决过程、踩过的坑，都在[探索记录](docs/01-探索记录.md)里。
+
+</details>
 
 ## 文档
 
 | 文件 | 内容 |
 |---|---|
-| [`docs/01-background-and-qa.md`](docs/01-background-and-qa.md) | 前置调查与实践记录（问答式，含证据与已排除方案） |
-| [`docs/02-architecture.md`](docs/02-architecture.md) | 分层、两条链路、状态机、关键文件 |
-| [`docs/03-build.md`](docs/03-build.md) | 构建、签名、打包、常见问题 |
-| [`docs/04-ui-design.md`](docs/04-ui-design.md) | 界面与文案规范（权重阶梯、状态色、折叠政策、文案对照） |
-| [`docs/05-legal.md`](docs/05-legal.md) | 许可、第三方组件、二进制来源 |
+| [探索记录](docs/01-探索记录.md) | 一步一步怎么探出来的：证据、否证、踩坑 |
+| [技术说明](docs/02-技术说明.md) | 分层、两个事务、通道约束、日志 |
+| [构建与发布](docs/03-构建与发布.md) | 环境、签名、版本规则、发布流程 |
+| [第三方与许可](docs/04-第三方与许可.md) | 二进制来源、依赖许可、免责 |
 
-## 目录
+## 构建
 
-```
-app/src/main/kotlin/online/usim/go2servicemode/   UI、事务、日志
-app/src/main/java/df/root/                        引擎桥（IPsec + 原生调用）
-app/src/main/assets/payload.sh                    事务 1：设备侧脚本
-app/src/main/assets/helper.sh                     事务 2：常驻助手
-app/src/main/jniLibs/arm64-v8a/libexp.so          提权引擎
-tools/patch_libexp_path.py                        引擎内路径补丁（可复现）
-docs/                                             文档
+```bash
+./gradlew assembleRelease
 ```
 
-## 致谢
+需要 JDK 17 与 Android SDK 37。签名材料从 `keystore.properties`（不进版本库）或 `GO2SM_*` 环境变量读取；没有时构建会回退 debug 签名并给出警告。详见[构建与发布](docs/03-构建与发布.md)。
 
-- **diabl0w** — DFRoot / DirtyFrag 漏洞引擎
-- **snothin** — GhostSam，三星 KDP / DEFEX 适配
-- **tiann** — KernelSU
-- **Kyant (kyant0)** — androidliquidglass / backdrop，本界面的液态玻璃效果
-- **kuuky29** — UniRoot
-- **xorpix / BuSung-dev** — Root My Galaxy 项目及文档
+## 支持
+
+如果它帮你省下了几步操作，可以请作者喝杯咖啡。这份支持会用在多版本固件包的核查和设备上。
+
+<table>
+<tr>
+<td align="center" width="180">
+<img src="docs/assets/reward-wechat.png" width="150" alt="微信赞赏码"><br>
+<sub>微信赞赏码</sub>
+</td>
+<td valign="top">
+<b>Ko-fi</b> · <a href="https://ko-fi.com/lots0">https://ko-fi.com/lots0</a><br><br>
+<b>支付宝</b> · 357459415@qq.com<br>
+<sub>转账时备注「赞赏」即可</sub>
+</td>
+</tr>
+</table>
 
 ## 许可
 
-本仓库代码为 MIT，见 [`LICENSE`](LICENSE)。仓库内预编译二进制的来源与再分发注意见 [`docs/05-legal.md`](docs/05-legal.md)。
+本仓库代码为 **MIT**，见 [LICENSE](LICENSE)。
 
-本项目用于安全研究与自有设备上的实验，按“原样”提供，不附带任何担保。
+仓库内含两个预编译二进制（`ksud-real`、`libexp.so`），来源与再分发条件见[第三方与许可](docs/04-第三方与许可.md)。
+
+## 致谢
+
+**项目引用**
+
+- **lots0** — 项目维护与多版本固件包审查
+- **diabl0w** — DFRoot / DirtyFrag
+- **snothin** — GhostSam，三星 KDP / DEFEX 适配
+- **tiann** — KernelSU
+
+**文档与参考项目**
+
+- **kuuky29** — UniRoot
+- **xorpix / BuSung-dev** — Root My Galaxy 项目及文档
+- **lots0 私有仓库**（未公开）— 版本包归档与审查记录
+
+**特别感谢**
+
+- **Gary** — 设备提供方。因对包审查的判断失误导致 D2 锁定，拆机维修解决；这也是本工具不对外暴露 su 能力的初衷。
+
+---
+
+<div align="center"><sub>本工具按“原样”提供，不附带任何担保；使用前请自行确认风险与当地法规。</sub></div>
