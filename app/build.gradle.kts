@@ -9,11 +9,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Without a build stamp there is no way to tell which APK is on the device:
-// two builds with different payloads look identical on screen. Shown on the
-// About page so the version can be verified without adb.
+// Build identity. Two builds can behave differently while looking identical, so
+// the About page shows the build date; the APK's own SHA-256 is computed at
+// runtime from the installed file.
 val buildStamp: String =
     SimpleDateFormat("yyMMdd-HHmm", Locale.US).format(Date())
+val buildDate: String =
+    SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date())
 
 android {
     namespace = "online.usim.go2servicemode"
@@ -29,8 +31,9 @@ android {
         minSdk = 31
         targetSdk = 37
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = "0.0.1"
         buildConfigField("String", "BUILD_STAMP", "\"$buildStamp\"")
+        buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
     }
 
     buildTypes {

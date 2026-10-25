@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,11 +35,12 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.Capsule
 
 /**
- * Liquid-glass surface used by the navigation capsules.
+ * Liquid-glass surface used by every capsule in the app: navigation, primary
+ * actions, menu rows and small buttons. One material, one set of parameters,
+ * so a button never has to fall back to a flat fill or a shadow.
  *
  * The backdrop has to be applied to the page background container (see
- * `AppBackground`), otherwise drawBackdrop has nothing to sample and the effect
- * silently degrades to a flat fill.
+ * AppBackground), otherwise drawBackdrop has nothing to sample.
  */
 @Composable
 fun AppBackground() {
@@ -70,6 +72,27 @@ private fun Blob(color: Color, modifier: Modifier) {
     )
 }
 
+/** Shared glass drawing for capsules of any width. */
+private fun Modifier.glassCapsule(backdrop: LayerBackdrop, fill: Color): Modifier =
+    this
+        .drawBackdrop(
+            backdrop = backdrop,
+            shape = { Capsule() },
+            effects = {
+                vibrancy()
+                blur(2f.dp.toPx())
+                lens(10f.dp.toPx(), 22f.dp.toPx())
+            },
+            onDrawSurface = { drawRect(fill) }
+        )
+        .drawBehind {
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.72f),
+                style = Stroke(width = 1.2f.dp.toPx()),
+                cornerRadius = CornerRadius(size.height / 2f)
+            )
+        }
+
 @Composable
 fun NavBar(
     backdrop: LayerBackdrop,
@@ -86,52 +109,112 @@ fun NavBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        GlassCapsule(backdrop, "主页", selected = page == 0 && !aboutOpen) { onTab(0) }
-        GlassCapsule(backdrop, "日志", selected = page == 1 && !aboutOpen) { onTab(1) }
+        NavCapsule(backdrop, "主页", selected = page == 0 && !aboutOpen) { onTab(0) }
+        NavCapsule(backdrop, "日志", selected = page == 1 && !aboutOpen) { onTab(1) }
         Spacer(Modifier.weight(1f))
-        GlassCapsule(backdrop, "关于", selected = aboutOpen, onDark = true, onClick = onAbout)
+        NavCapsule(backdrop, "关于", selected = aboutOpen, onClick = onAbout)
     }
 }
 
 @Composable
-private fun GlassCapsule(
+private fun NavCapsule(
     backdrop: LayerBackdrop,
     label: String,
     selected: Boolean,
-    onDark: Boolean = false,
     onClick: () -> Unit
 ) {
-    val fill = when {
-        selected && onDark -> Tone.Ink.copy(alpha = 0.94f)
-        selected -> Tone.Ink.copy(alpha = 0.92f)
-        else -> Color.White.copy(alpha = 0.55f)
-    }
-    val textColor = if (selected) Color.White else Tone.InkSoft
+    val fill = if (selected) Tone.Ink.copy(alpha = 0.92f) else Color.White.copy(alpha = 0.55f)
     Box(
         Modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { Capsule() },
-                effects = {
-                    vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(10f.dp.toPx(), 22f.dp.toPx())
-                },
-                onDrawSurface = { drawRect(fill) }
-            )
-            .drawBehind {
-                drawRoundRect(
-                    color = Color.White.copy(alpha = if (selected) 0.9f else 0.6f),
-                    style = Stroke(width = 1.2f.dp.toPx()),
-                    cornerRadius = CornerRadius(size.height / 2f)
-                )
-            }
+            .glassCapsule(backdrop, fill)
             .clickable { onClick() }
             .padding(horizontal = 22.dp, vertical = 12.dp)
     ) {
         BasicText(
             label,
-            style = TextStyle(color = textColor, fontSize = 14.sp)
+            style = TextStyle(color = if (selected) Color.White else Tone.InkSoft, fontSize = 14.sp)
         )
+    }
+}
+
+/**
+ * Capsule button on glass. `accent = true` tints the glass instead of filling
+ * it opaque, so the backdrop still shows through.
+ */
+@Composable
+fun GlassButton(
+    backdrop: LayerBackdrop,
+    label: String,
+    modifier: Modifier = Modifier,
+    accent: Boolean = false,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val fill = when {
+        !enabled -> Tone.CardSubtle
+        accent -> Tone.Accent.copy(alpha = 0.86f)
+        else -> Color.White.copy(alpha = 0.55f)
+    }
+    val textColor = when {
+        !enabled -> Tone.InkFaint
+        accent -> Color.White
+        else -> Tone.Ink
+    }
+    val surface = if (enabled) {
+        Modifier.glassCapsule(backdrop, fill)
+    } else {
+        Modifier.clip(ChipShape).background(fill)
+    }
+    Box(
+        modifier
+            .then(surface)
+            .clickable(enabled = enabled) { onClick() }
+            .padding(horizontal = 18.dp, vertical = 11.dp)
+    ) {
+        BasicText(label, style = TextStyle(color = textColor, fontSize = 13.sp))
+    }
+}
+
+/** Menu row as a wide glass capsule: name on the left, parameter underneath. */
+@Composable
+fun GlassRow(
+    backdrop: LayerBackdrop,
+    title: String,
+    subtitle: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .then(
+                if (enabled) Modifier.glassCapsule(backdrop, Color.White.copy(alpha = 0.55f))
+                else Modifier.clip(ChipShape).background(Tone.CardSubtle)
+            )
+            .clickable(enabled = enabled) { onClick() }
+            .padding(horizontal = 18.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            BasicText(
+                title,
+                style = BodyStyle.copy(color = if (enabled) Tone.Ink else Tone.InkFaint)
+            )
+            Spacer(Modifier.size(2.dp))
+            BasicText(subtitle, style = CaptionStyle)
+        }
+        Box(
+            Modifier.size(24.dp).clip(CircleShape)
+                .background(if (enabled) Tone.Ink.copy(alpha = 0.9f) else Tone.IdleBg),
+            contentAlignment = Alignment.Center
+        ) {
+            BasicText(
+                "›",
+                style = TextStyle(
+                    color = if (enabled) Color.White else Tone.InkFaint,
+                    fontSize = 14.sp
+                )
+            )
+        }
     }
 }

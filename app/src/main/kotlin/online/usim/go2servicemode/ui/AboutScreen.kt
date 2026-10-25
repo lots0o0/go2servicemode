@@ -1,14 +1,14 @@
 package online.usim.go2servicemode.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -16,22 +16,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import online.usim.go2servicemode.BuildConfig
 
 /**
- * About page.
- *
- * The order is the point: safety notice first, one-line description second,
- * implementation third and folded, acknowledgements last and smallest. Earlier
- * this page was five equally weighted cards, which made the risk statement
- * indistinguishable from a credits list.
+ * About page. Order is the hierarchy: safety notice, one-line description,
+ * implementation (folded), credits (smallest).
  */
 @Composable
-fun AboutScreen() {
+fun AboutScreen(version: String, buildDate: String, apkHash: String?) {
     var showImpl by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
@@ -44,10 +38,13 @@ fun AboutScreen() {
     ) {
         item {
             ScreenHeader("关于") {
-                BasicText(
-                    "${BuildConfig.BUILD_STAMP} · v${BuildConfig.VERSION_NAME}",
-                    style = CaptionStyle
-                )
+                Column {
+                    BasicText(version, style = CaptionStyle)
+                    BasicText(buildDate, style = CaptionStyle)
+                    if (apkHash != null) {
+                        BasicText("SHA-256 $apkHash", style = CaptionStyle)
+                    }
+                }
             }
         }
 
@@ -69,8 +66,8 @@ fun AboutScreen() {
                 BasicText("工具说明", style = SectionStyle)
                 Spacer(Modifier.height(8.dp))
                 BasicText(
-                    "把选定的 keyString 发给三星 ServiceMode。没有常驻 root，没有授权面板，" +
-                        "也没有对其他应用开放的通道。",
+                    "三星 ServiceMode 启动工具，防止固化分区等危险产生，不主动对外输出 su 能力，" +
+                        "且不建议使用任何 SU 管理器介入，请谨慎操作！",
                     style = BodySoftStyle
                 )
             }
@@ -79,17 +76,10 @@ fun AboutScreen() {
 
         item {
             SectionCard(level = CardLevel.Normal) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    CollapsibleHeader("实现方式", showImpl) { showImpl = !showImpl }
-                }
+                CollapsibleHeader("实现方式", showImpl) { showImpl = !showImpl }
                 if (showImpl) {
                     Spacer(Modifier.height(8.dp))
-                    BasicText(
-                        "基于 DirtyFrag（CVE-2026-43284）与 KernelSU classic 实现；" +
-                            "不使用 Next 分支，不启动也不依赖 KernelSU Manager。\n" +
-                            "操作拆成两步：① 建立临时 su ② 发送启动指令。分开是为了任一步失败都能单独定位。",
-                        style = BodySoftStyle
-                    )
+                    BasicText("基于 CVE-2026-43284 等公开研究成果实现。", style = BodySoftStyle)
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -100,30 +90,30 @@ fun AboutScreen() {
                 BasicText("致谢", style = SectionStyle.copy(fontSize = 14.sp))
                 Spacer(Modifier.height(10.dp))
                 CreditGroup(
-                    "引擎与核心适配",
+                    "项目引用",
                     listOf(
-                        "diabl0w — DFRoot / DirtyFrag 漏洞引擎",
+                        "lots0 — 多版本包审查",
+                        "diabl0w — DFRoot / DirtyFrag",
                         "snothin — GhostSam，三星 KDP / DEFEX 适配",
                         "tiann — KernelSU"
                     )
                 )
                 Spacer(Modifier.height(12.dp))
                 CreditGroup(
-                    "UI 组件",
-                    listOf("Kyant (kyant0) — androidliquidglass / backdrop，液态玻璃效果")
-                )
-                Spacer(Modifier.height(12.dp))
-                CreditGroup(
                     "文档与参考项目",
                     listOf(
                         "kuuky29 — UniRoot",
-                        "xorpix / BuSung-dev — Root My Galaxy 项目及文档"
+                        "xorpix / BuSung-dev — Root My Galaxy 项目及文档",
+                        "lots0 私有仓库（未公开）— 版本包归档与审查记录"
                     )
                 )
-                Spacer(Modifier.height(14.dp))
-                BasicText(
-                    "开源许可与第三方组件归属见仓库 docs/05-legal.md。",
-                    style = CaptionStyle
+                Spacer(Modifier.height(12.dp))
+                CreditGroup(
+                    "特别感谢",
+                    listOf(
+                        "Gary — 设备提供方",
+                        "因对包审查的判断失误导致 D2 锁定，拆机维修解决。这也是本工具不对外暴露 su 能力的初衷。"
+                    )
                 )
             }
             Spacer(Modifier.height(16.dp))
@@ -143,8 +133,7 @@ private fun CreditGroup(title: String, entries: List<String>) {
     )
     Spacer(Modifier.height(6.dp))
     entries.forEach { line ->
-        Row(Modifier.padding(vertical = 2.dp)) {
-            BasicText(line, style = BodySoftStyle.copy(fontSize = 13.sp))
-        }
+        BasicText(line, style = BodySoftStyle.copy(fontSize = 13.sp))
+        Spacer(Modifier.height(4.dp))
     }
 }

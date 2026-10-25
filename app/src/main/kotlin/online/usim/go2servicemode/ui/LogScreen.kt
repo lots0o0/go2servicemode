@@ -11,16 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,30 +28,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import online.usim.go2servicemode.LogEntry
 import online.usim.go2servicemode.LogStore
 import java.io.File
 
 /**
- * Log page.
+ * Log page: the current run's outcome plus the run history.
  *
- * Two layers, because a user and a maintainer need different things from the
- * same run: a one-line outcome on top, the raw engine output folded underneath.
- * The previous version printed shell commands straight into the page and left
- * `rc=0` competing with the result.
+ * The page is one scroll container. Raw output is only a short preview here;
+ * the full text opens in LogViewer, which owns its own single list.
  */
 @Composable
 fun LogScreen(
+    backdrop: LayerBackdrop,
     summary: String?,
     log: List<LogEntry>,
     runs: List<File>,
-    viewing: String?,
-    onOpen: (File) -> Unit,
-    onClose: () -> Unit,
+    currentFile: File?,
+    onOpenCurrent: () -> Unit,
+    onOpenFile: (File) -> Unit,
     onDelete: (File) -> Unit,
     onShare: (File) -> Unit
 ) {
-    var rawExpanded by rememberSaveable { mutableStateOf(false) }
     var showHistoryHint by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
@@ -67,7 +63,7 @@ fun LogScreen(
         item {
             ScreenHeader("运行日志") {
                 if (log.isNotEmpty()) {
-                    BasicText("${log.size} 条", style = CaptionStyle)
+                    BasicText("${log.size} 行", style = CaptionStyle)
                 }
             }
         }
@@ -75,22 +71,32 @@ fun LogScreen(
         if (summary != null || log.isNotEmpty()) {
             item {
                 SectionCard(level = CardLevel.Normal) {
-                    BasicText(summary ?: "已运行，未生成摘要", style = BodyStyle)
+                    BasicText(summary ?: "本次运行未生成摘要", style = BodyStyle)
                     if (log.isNotEmpty()) {
                         Spacer(Modifier.height(10.dp))
-                        CollapsibleHeader("原始输出", rawExpanded) { rawExpanded = !rawExpanded }
-                        if (rawExpanded) {
-                            Spacer(Modifier.height(8.dp))
-                            Column(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 340.dp)
-                                    .clip(InnerShape)
-                                    .background(Tone.Field)
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(12.dp)
-                            ) {
-                                log.forEach { MonoLine(it.time, it.text) }
+                        // Preview only: the last three lines, clipped. No inner
+                        // scroll view, so it cannot fight the page's list.
+                        Column(Modifier.fillMaxWidth()) {
+                            log.takeLast(3).forEach { e ->
+                                Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+                                    BasicText(
+                                        e.time,
+                                        modifier = Modifier.padding(end = 8.dp),
+                                        style = MonoStyle.copy(color = Tone.InkFaint)
+                                    )
+                                    BasicText(
+                                        e.text,
+                                        modifier = Modifier.weight(1f),
+                                        style = MonoStyle.copy(color = Tone.InkSoft)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GlassButton(backdrop, "查看完整日志") { onOpenCurrent() }
+                            if (currentFile != null) {
+                                GlassButton(backdrop, "导出") { onShare(currentFile) }
                             }
                         }
                     }
@@ -102,7 +108,7 @@ fun LogScreen(
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 BasicText("运行历史", style = SectionStyle)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.size(8.dp))
                 Box(
                     Modifier
                         .size(16.dp)
@@ -123,43 +129,12 @@ fun LogScreen(
             Spacer(Modifier.height(10.dp))
         }
 
-        if (viewing != null) {
-            item {
-                SectionCard(level = CardLevel.Normal) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        BasicText("日志内容", style = SectionStyle.copy(fontSize = 14.sp))
-                        Spacer(Modifier.weight(1f))
-                        GhostButton("关闭") { onClose() }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 420.dp)
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        viewing.lineSequence().filter { it.isNotBlank() }.forEach { line ->
-                            BasicText(
-                                line,
-                                modifier = Modifier.padding(vertical = 1.dp),
-                                style = MonoStyle
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-        }
-
         if (runs.isEmpty()) {
             item {
-                SectionCard(level = CardLevel.Subtle) {
-                    Hint("暂无历史记录")
-                }
+                SectionCard(level = CardLevel.Subtle) { Hint("暂无历史记录") }
             }
         } else {
-            items(runs.size) { i ->
-                val f = runs[i]
+            items(runs) { f ->
                 SectionCard(level = CardLevel.Subtle) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         BasicText(LogStore.label(f), style = BodyStyle)
@@ -168,9 +143,9 @@ fun LogScreen(
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GhostButton("查看") { onOpen(f) }
-                        GhostButton("导出") { onShare(f) }
-                        GhostButton("删除") { onDelete(f) }
+                        GlassButton(backdrop, "查看") { onOpenFile(f) }
+                        GlassButton(backdrop, "导出") { onShare(f) }
+                        GlassButton(backdrop, "删除") { onDelete(f) }
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -179,10 +154,3 @@ fun LogScreen(
     }
 }
 
-@Composable
-private fun MonoLine(time: String, text: String) {
-    Row(Modifier.padding(vertical = 1.dp)) {
-        BasicText(time, modifier = Modifier.width(60.dp), style = MonoStyle.copy(color = Tone.InkFaint))
-        BasicText(text, modifier = Modifier.weight(1f), style = MonoStyle)
-    }
-}
