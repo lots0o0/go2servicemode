@@ -8,7 +8,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%2012%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](docs/03-构建与发布.md)
-[![Version](https://img.shields.io/badge/version-V0.0.1-2F6BFF?style=flat-square)](https://github.com/lots0o0/go2servicemode/releases)
+[![Version](https://img.shields.io/badge/version-V0.0.2-2F6BFF?style=flat-square)](https://github.com/lots0o0/go2servicemode/releases)
 [![ABI](https://img.shields.io/badge/ABI-arm64--v8a-6B7280?style=flat-square)](docs/03-构建与发布.md)
 
 </div>
@@ -34,9 +34,10 @@
 
 | 版本 | 构建日期 | APK SHA-256 | 证书 SHA-256 |
 |---|---|---|---|
-| **V0.0.1** | 2026-10-25 18:47 | `5e6b60436a98b832b8f691919c9cdbb855567fe8660f9d6381da7726c9e811a0` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
+| **V0.0.2** | 2026-10-25 19:01 | `d0c781c392353a6350cc78e482773f5ac9b56268c055890094e6d65b589c1a89` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
+| V0.0.1 | 2026-10-25 18:47 | `5e6b60436a98b832b8f691919c9cdbb855567fe8660f9d6381da7726c9e811a0` | `176f2588f9b5b009f5dff42b7cd497f9d8462e74a68deb7a73a9b5ed51cbc9bd` |
 
-安装后在「关于」页右上角可看到 `V0.0.1`、构建日期与 APK 的 SHA-256 前 16 位，可与上表核对。
+安装后在「关于」页右上角可看到 `V0.0.2`、构建日期与 APK 的 SHA-256 前 16 位，可与上表核对。
 
 > 升级要求 `versionCode` 递增且签名证书一致。换签名等于换应用，无法覆盖安装。
 

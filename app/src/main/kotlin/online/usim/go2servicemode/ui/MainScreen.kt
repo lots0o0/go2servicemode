@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import online.usim.go2servicemode.DeviceSnapshot
 import online.usim.go2servicemode.Engine
 
 /** State of transaction 1 as shown to the user. */
@@ -31,6 +32,7 @@ enum class TxState { NotRun, Running, Ready, Failed }
 @Composable
 fun MainScreen(
     backdrop: LayerBackdrop,
+    device: DeviceSnapshot,
     busy: Boolean,
     tx: TxState,
     busyMessage: String?,
@@ -46,6 +48,8 @@ fun MainScreen(
     ) {
         ScreenHeader("go2servicemode")
         BasicText("三星 ServiceMode 启动工具", style = BodySoftStyle)
+        Spacer(Modifier.height(4.dp))
+        BasicText(device.description, style = CaptionStyle)
         Spacer(Modifier.height(18.dp))
 
         SectionCard(level = CardLevel.Primary) {
@@ -76,7 +80,7 @@ fun MainScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        val ready = tx == TxState.Ready
+        val ready = device.canOpenMenu
         SectionCard(level = if (ready) CardLevel.Primary else CardLevel.Normal) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BasicText("打开 ServiceMode", style = SectionStyle)

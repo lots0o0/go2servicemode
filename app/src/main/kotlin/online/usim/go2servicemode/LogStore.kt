@@ -41,9 +41,23 @@ object LogStore {
         runCatching { file.appendText("$time  $text\n") }
     }
 
-    /** Writes the one-line outcome. Must be called before the run lines. */
+    /**
+     * Writes the one-line outcome as a header, keeping the lines already in the
+     * file. Earlier this used writeText() alone, which truncates the file — the
+     * live page looked complete while the stored run contained only the summary.
+     */
     fun writeSummary(file: File, summary: String) {
-        runCatching { file.writeText("$SUMMARY_PREFIX$summary\n") }
+        runCatching {
+            val body = if (file.exists()) read(file) else ""
+            val kept = body.lineSequence()
+                .filterNot { it.startsWith(SUMMARY_PREFIX) }
+                .joinToString("\n")
+                .trimEnd('\n')
+            file.writeText(
+                if (kept.isEmpty()) "$SUMMARY_PREFIX$summary\n"
+                else "$SUMMARY_PREFIX$summary\n$kept\n"
+            )
+        }
     }
 
     fun summaryOf(file: File): String? =

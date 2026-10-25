@@ -90,8 +90,9 @@ private fun App() {
     var busy by remember { mutableStateOf(false) }
     var busyMessage by remember { mutableStateOf<String?>(null) }
     var apkHash by remember { mutableStateOf<String?>(null) }
+    var device by remember { mutableStateOf(DeviceProbe.probe(context)) }
     var tx by remember {
-        mutableStateOf(if (MenuTx.ready(context)) TxState.Ready else TxState.NotRun)
+        mutableStateOf(if (device.canOpenMenu) TxState.Ready else TxState.NotRun)
     }
     var showAbout by remember { mutableStateOf(false) }
 
@@ -146,6 +147,7 @@ private fun App() {
         // app could never read them back.
         withContext(Dispatchers.IO) { MenuTx.ensure(context) }
         apkHash = withContext(Dispatchers.IO) { ApkInfo.shortHash(context) }
+        device = withContext(Dispatchers.IO) { DeviceProbe.probe(context) }
         if (log.isEmpty()) {
             val latest = withContext(Dispatchers.IO) { LogStore.list(context).firstOrNull() }
             if (latest != null) {
@@ -181,6 +183,7 @@ private fun App() {
                     when (index) {
                         PAGE_MAIN -> MainScreen(
                             backdrop = backdrop,
+                            device = device,
                             busy = busy,
                             tx = tx,
                             busyMessage = busyMessage,
@@ -218,6 +221,7 @@ private fun App() {
                                             }
                                             ok
                                         }
+                                        device = withContext(Dispatchers.IO) { DeviceProbe.probe(context) }
                                         tx = if (ready) TxState.Ready else TxState.Failed
                                         finishRun(
                                             if (ready) "建立临时 su · 已就绪" else "建立临时 su · 失败",
